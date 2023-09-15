@@ -7,6 +7,8 @@
 - [Hardware Components](#hardware-components)
 - [Software](#software)
 - [Design decisions](#design-decisions)
+- [Hardware Setup](#hardware-setup)
+- [Software Setup](#software-setup)
 
 ## Introduction
 
@@ -42,7 +44,7 @@ best performing vehicle.
 - L293D Motor Driver
 - MPU-9250 IMU Sensor
 - LM2596S Buck Converter
-- Decently Big RC Car
+- Decently Big RC Car (x2)
 - 11.1V 3S LiPo Battery
 - Small Breadboard Terminals(x2)
 
@@ -189,10 +191,79 @@ the best choice for this vehicle.
 ### The usage of an RC car as the chassis instead of a custom built one
 
 This decision has been partly influenced by the scarcity of 3D printing in our region and partly by the ease of reproducability. Using an RC
-car as the chassis allowed us to get around the issue of not being able to do 3D printing or using CNC to build a custom chassis.
+car as the chassis allowed us to get around the issue of not being able to do 3D printing or using CNC to build a custom chassis. This has
+also greatly simplified the development process.
 
 ### The usage of an IMU sensor
 
 The gyroscope inside the IMU sensor allows us to find out what's the amount of angle the vehicle has turned. This helps us to make proper turns
 around corners. Also, it helps us to turn to the opposite side when necessary.
 
+## Hardware setup
+
+Firstly, solder jumper wires with appropriate colors to the buck converter. Female jumper wires are preferred for OUT+ and OUT- and male
+jumper wires are preferred for IN+ and IN-.
+
+Then, Make sure you have a decently sized RC car chassis. Put the motor driver, the buck converter, the battery, the ultrasonic sensors
+and a voltage rail on the bottom chassis. You may want to cut out the AAA battery compartment out of the chassis to save space. Then put 4 hex 
+extenders or anything tall enough on the four holes where screws were located previous. These are located on the 4 corners of the chassis. For the
+second "floor", remove everything from the chassis first. Cut out the AAA battery compartment for saving space. Make a hole on the chassis. This is 
+where we'll route all the cables from the bottom chassis to the top chassis. Put the Raspberry PI, Arduino Mega, PI Camera, IMU sensor, and a voltage
+rail there. You may refer to the vehicle pictures for help. Before putting the top chassis on top of the extenders, connect everything based on the
+schematics using jumper wires but do not connect the PI to the buck converter yet. Connect the bottom voltage rail to the battery and check whether
+the lights of the buck converter and the motor driver are turned on or not. If they're turned on, everything's good. If not, immediately disconnect
+the battery and check every connection. The most common mistake is wrong polarity. This can be checked by checking whether any wire has become hot or
+not. If everything's ok, connect the battery and then connect your multimeter to the OUT+ and OUT- pads of the buck converter. Slowly turn the screw like
+thing on the blue part of the buck converter to adjust the output voltage. You should stop when your multimeter reads 5V. Now connect the buck converter
+to the Raspberry PI and put the top chassis on top of the bottom chassis. 
+
+## Software setup
+
+We'll start by uploading the second module of our program to the Arduino Mega which controls the vehicle. Follow the following steps to upload the
+program:
+
+- Download and install Arduino IDE (if you already don't have it installed)
+- Open `src/module_2/module_2.ino` in the IDE
+- Connect your Arduino Mega to your computer. Depending on your operating system, you may have to follow additional steps.
+- Press the button with "=>" icon located on top left to upload the program to your Arduino Mega.
+
+Now, let's set up our Raspberry PI for the object detection code. First install Raspbian OS onto a memory card. Follow
+[this tutorial](https://www.raspberrypi.com/documentation/computers/getting-started.html) for more info. You should
+not install the full version of Raspbian OS as it's bloated with softwares that aren't really necessary for our job.
+The base version of the OS which is 0.8GB in size is recommended. You also must install the `32-bit` version of this 
+OS because the PI camera doesn't work on 64-bit Raspbian OS.
+
+After installing Raspbian OS, we need to enable `Legacy Camera`. First, connect a monitor with an HDMI cable to your
+Raspberry PI. Now, boot up your Raspberry PI by connecting it to any mobile phone charger. After it boots up, follow
+along with the setup screen. After finishing that, open up terminal and run `sudo raspi-config`. Then, using arrow keys,
+head to `Interfaces` option. Now go to `Legacy Camera` and enable that. Finally go back to main menu and navigate to `Finish`
+and press enter. When it asks for rebooting, press `Yes`. 
+
+After restarting, run the following command to install the necessary softwares for image recognition:
+
+```sh
+sudo apt update && sudo apt install python-opencv && pip3 install imutils "picamera[array]"  pyserial
+```
+
+Now, connect your camera to the Raspberry PI. After that, clone this repository into your PI and run the code inside `src/module_1/module_1.py` using the following
+command:
+
+```sh
+python src/module_1/module_1.py
+```
+
+If everything's okay, you should see `No detection` on the terminal. Hold a green or a red object for testing. Now exit the program by pressing Ctrl+C.
+
+Let's add the script to startup so that we don't have to start it manually all the time. Run the following command first:
+
+```sh
+sudo nano /etc/rc.local
+```
+
+Add the following line before `exit 0` (Assuming you cloned the repository on the home folder and the username is `pi`):
+
+```sh
+python3 /home/pi/wro-team-rickshaw/src/module_1/module_1.py
+```
+
+And you're done with software setup! Now connect the Arduino to the Raspberry PI and you're ready to go!
