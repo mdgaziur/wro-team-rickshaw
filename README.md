@@ -242,7 +242,7 @@ and press enter. When it asks for rebooting, press `Yes`.
 After restarting, run the following command to install the necessary softwares for image recognition:
 
 ```sh
-sudo apt update && sudo apt install python-opencv && pip3 install imutils "picamera[array]"  pyserial
+sudo apt update && sudo apt install python-opencv && pip3 install imutils "picamera[array]" pyserial
 ```
 
 Now, connect your camera to the Raspberry PI. After that, clone this repository into your PI and run the code inside `src/module_1/module_1.py` using the following
