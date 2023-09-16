@@ -16,12 +16,18 @@ This repoository contains the engineering materials for building the vehicle des
 WRO 2023 Future Engineers category. The list of hardware components, details about the software that powers
 the vehicle and design decisions are given here.
 
+### Naming
+
+The naming of the team is quite random. Our vehicle is called "Rickshaw"(ironically). And the motto _"Anything
+for rickshaw!"_ signifies that we can do anything for the "Rickshaw" so that it works the best.
+
 ### The Team
 
 The team consists of 3 very passionate students who are aiming to change Bangladesh through the next technological
 revolution. This team is quite lucky to have a really helpful coach who's always coming up with ways to make the
 best performing vehicle.
 
+### Team Members
 - Al Mubin Khan Nabil [@nirobnabil](https://github.com/nirobnabil) (Coach)
 - MD Gaziur Rahman Noor [@mdgaziur](https://github.com/mdgaziur)
 - Ibrahim Al Syed [@ibrahimalsyed60](https://github.com/ibrahimalsyed60)
