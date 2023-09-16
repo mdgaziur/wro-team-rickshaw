@@ -275,7 +275,7 @@ sudo nano /etc/rc.local
 Add the following line before `exit 0` (Assuming you cloned the repository on the home folder and the username is `pi`):
 
 ```sh
-python3 /home/pi/wro-team-rickshaw/src/module_1/module_1.py
+python /home/pi/wro-team-rickshaw/src/module_1/module_1.py
 ```
 
 And you're done with software setup! Now connect the Arduino to the Raspberry PI and you're ready to go!
