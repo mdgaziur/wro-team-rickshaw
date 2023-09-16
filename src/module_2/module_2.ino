@@ -1,3 +1,4 @@
+#include <LiquidCrystal_I2C.h>
 #include <NewPing.h>
 #include <basicMPU6050.h>
 
@@ -26,18 +27,34 @@
 
 // Constants
 #define MIN_DIST_THRES        20 // cm
-#define MAX_DIST             150 // cm
+#define MAX_DIST             300 // cm
 #define TURN_ANGLE            45 // deg
-#define TURN_DELAY_OBSTACLE  200 // ms
-#define ALIGNMENT_DELAY      100 // ms
+#define TURN_DELAY_OBSTACLE  100 // ms
+#define ALIGNMENT_DELAY       50 // ms
 #define LR_ERROR_MARGIN        1 // cm
-#define TURN_POWER           155
-#define NORMAL_POWER         200
-#define TURN_MOTOR_POWER     150
-#define STOP_DELAY           300 // ms
+#define TURN_POWER           255
+#define NORMAL_POWER         255
+#define TURN_MOTOR_POWER     200
+#define STOP_DELAY           200 // ms
+#ifndef USE_IMU
+#define TURN_DELAY_OPEN      150 // ms
+#endif
+
+#define PRINT_DISTANCE(IDENT, SENSOR) \
+  Serial.print(#IDENT); \
+  Serial.print(": "); \
+  Serial.print(SENSOR.ping_cm()); \
+  Serial.println("cm"); \
+
+#define DEBUG_INFO_LCD() \
+    lcd.setCursor(0, 0); \
+    lcd.print(String(left_sonar) + ' ' + right_sonar + ' ' + front_sonar + ' ' + back_sonar); \
+    lcd.setCursor(0, 1); \
+    lcd.print(object_detection); \
 
 basicMPU6050<> imu;
 int turns = 0;
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 NewPing front_sensor(FRONT_T, FRONT_E, MAX_DIST);
 NewPing right_sensor(RIGHT_T, RIGHT_E, MAX_DIST);
 NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
@@ -48,13 +65,13 @@ void set_power(int power) {
 }
 
 void go_forward() {
-  digitalWrite(IN4, HIGH);
-  digitalWrite(IN5, LOW);
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN5, HIGH);
 }
 
 void go_backward() {
-  digitalWrite(IN4, LOW);
-  digitalWrite(IN5, HIGH);
+  digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW);
 }
 
 void stop_motor() {
@@ -106,6 +123,7 @@ void turn_left_with_angle(float angle) {
 }
 
 char read_serial() {
+  if (!Serial.available()) return NONE;
   return (char)Serial.read();
 }
 
@@ -148,19 +166,36 @@ void set_up_imu() {
 }
 
 void setup() {
+  lcd.init();
+  lcd.clear();
+  lcd.backlight();
+  
   Serial.begin(9600);
+
+#ifdef USE_IMU
+  set_up_imu();
+#endif
 
   // Set up the motor driver
   set_up_motor(ENA, IN2, IN3, TURN_MOTOR_POWER);
-  set_up_motor(ENB, IN4, IN4, NORMAL_POWER);
+  set_up_motor(ENB, IN4, IN5, NORMAL_POWER);
+  go_forward();
 }
 
 void loop() {
+  PRINT_DISTANCE(FRONT, front_sensor);
+  PRINT_DISTANCE(LEFT, left_sensor);
+  PRINT_DISTANCE(RIGHT, right_sensor);
+  PRINT_DISTANCE(BACK, back_sensor);
+
+#ifdef USE_IMU
   imu.updateBias();
+#endif
   if (turns == 12) {
     delay(STOP_DELAY);
     stop_motor();
   } else {
+#ifdef USE_IMU
     if (turns == 8) {
       if (read_serial() == RIGHT) {
         // getting RIGHT means we've detected
@@ -169,20 +204,30 @@ void loop() {
         return;
       }
     }
+#endif
 
     unsigned long left_sonar = left_sensor.ping_cm();
     unsigned long right_sonar = right_sensor.ping_cm();
     unsigned long front_sonar = front_sensor.ping_cm();
     unsigned long back_sonar = back_sensor.ping_cm();
     char object_detection = read_serial();
+    DEBUG_INFO_LCD();
 
     // Turning
     if (front_sonar < MIN_DIST_THRES) {
       set_power(TURN_POWER);
       if (left_sonar < MIN_DIST_THRES || left_sonar < right_sonar) {
+#ifdef USE_IMU
         turn_right_with_angle(TURN_ANGLE);
+#else
+        turn_right(300);
+#endif
       } else {
+#ifdef USE_IMU
         turn_left_with_angle(TURN_ANGLE);
+#else
+        turn_right(300);
+#endif
       }
 
       turns += 1;
@@ -193,6 +238,7 @@ void loop() {
     right_sonar = right_sensor.ping_cm();
     front_sonar = front_sensor.ping_cm();
     object_detection = read_serial();
+    DEBUG_INFO_LCD();
 
     // lane changing
     if (object_detection == LEFT) {
@@ -202,17 +248,18 @@ void loop() {
     }
 
     left_sonar = left_sensor.ping_cm();
-    right_sonar = right_sensor.ping_cm();
+    right_sonar = right_sensor.ping_cm(); 
+    DEBUG_INFO_LCD();
 
     // center alignment
     while (abs(left_sonar - right_sonar) > LR_ERROR_MARGIN) {
       left_sonar = left_sensor.ping_cm();
       right_sonar = right_sensor.ping_cm();
-      unsigned long diff = left_sonar - right_sonar;
+      DEBUG_INFO_LCD();
 
-      if (diff < 0) {
+      if (left_sonar < right_sonar) {
         turn_right(ALIGNMENT_DELAY);
-      } else if (diff > 1) {
+      } else if (left_sonar > right_sonar) {
         turn_left(ALIGNMENT_DELAY);
       }
     }
