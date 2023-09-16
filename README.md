@@ -87,7 +87,6 @@ pseudocode:
 INT   TURNS = 0
 CONST MIN_DIST_THRES = 20cm
 CONST TURN_ANGLE = 45deg
-CONST TURN_DELAY_OPEN = 500ms
 CONST TURN_DELAY_OBSTACLE = 200ms
 CONST ALIGNMENT_DELAY = 100ms
 CONST LR_ERROR_MARGIN = 1cm
@@ -100,15 +99,18 @@ FUNC TURN_OPPOSITE()
     LAST_YAW = READ_YAW()
 
     WHILE ABS(READ_YAW() - LAST_YAW) < 180 DO
+        TURN_LEFT_NO_DELAY()
+        GO_BACK()
         WHILE READ_SONAR(BACK) > MIN_DIST_THRES DO
-            GO_BACK()
-            TURN_LEFT_NO_DELAY()
+            // The motors are already running, so
+            // there's no need to do anything here
         DONE
-        STOP_MOTOR()
 
+        GO_FORWARD()
+        TURN_RIGHT_NO_DELAY()
         WHILE READ_SONAR(FRONT) > MIN_DIST_THRES DO
-            GO_FORWARD()
-            TURN_RIGHT_NO_DELAY()
+            // The motors are already running, so
+            // there's no need to do anything here
         DONE
         STOP_MOTOR()
     DONE
@@ -142,9 +144,9 @@ FUNC LOOP()
         IF FRONT_SONAR < MIN_DIST_THRES THEN
             SET_SPEED(TURN_SPEED)
             IF LEFT_SONAR < MIN_DIST_THRES OR LEFT_SONAR < RIGHT_SONAR THEN
-                TURN_RIGHT(TURN_DELAY_OPEN, TURN_ANGLE)
+                TURN_RIGHT(TURN_ANGLE)
             ELSE
-                TURN_LEFT(TURN_DELAY_OPEN, TURN_ANGLE)
+                TURN_LEFT(TURN_ANGLE)
             DONE
 
             TURNS += 1
@@ -154,7 +156,7 @@ FUNC LOOP()
         LET LEFT_SONAR = READ_SONAR(LEFT)
         LET RIGHT_SONAR = READ_SONAR(RIGHT)
         LET FRONT_SONAR = READ_SONAR(FRONT)
-
+        LET OBJECT_DETECTION = READ_SERIAL();
         // LANE CHANGING
         IF OBJECT_DETECTION == "L" THEN
             TURN_LEFT(TURN_DELAY_OBSTACLE)
