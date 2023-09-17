@@ -1,4 +1,3 @@
-#include <LiquidCrystal_I2C.h>
 #include <NewPing.h>
 #include <basicMPU6050.h>
 
@@ -30,8 +29,8 @@
 #define MAX_DIST             300 // cm
 #define TURN_ANGLE            45 // deg
 #define TURN_DELAY_OBSTACLE  100 // ms
-#define ALIGNMENT_DELAY       50 // ms
-#define LR_ERROR_MARGIN        1 // cm
+#define ALIGNMENT_DELAY      100 // ms
+#define LR_ERROR_MARGIN        5 // cm
 #define TURN_POWER           255
 #define NORMAL_POWER         255
 #define TURN_MOTOR_POWER     200
@@ -46,15 +45,8 @@
   Serial.print(SENSOR.ping_cm()); \
   Serial.println("cm"); \
 
-#define DEBUG_INFO_LCD() \
-    lcd.setCursor(0, 0); \
-    lcd.print(String(left_sonar) + ' ' + right_sonar + ' ' + front_sonar + ' ' + back_sonar); \
-    lcd.setCursor(0, 1); \
-    lcd.print(object_detection); \
-
 basicMPU6050<> imu;
 int turns = 0;
-LiquidCrystal_I2C lcd(0x27, 16, 2);
 NewPing front_sensor(FRONT_T, FRONT_E, MAX_DIST);
 NewPing right_sensor(RIGHT_T, RIGHT_E, MAX_DIST);
 NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
@@ -166,10 +158,6 @@ void set_up_imu() {
 }
 
 void setup() {
-  lcd.init();
-  lcd.clear();
-  lcd.backlight();
-  
   Serial.begin(9600);
 
 #ifdef USE_IMU
@@ -211,22 +199,24 @@ void loop() {
     unsigned long front_sonar = front_sensor.ping_cm();
     unsigned long back_sonar = back_sensor.ping_cm();
     char object_detection = read_serial();
-    DEBUG_INFO_LCD();
 
     // Turning
     if (front_sonar < MIN_DIST_THRES) {
+      Serial.print("Turning ");
       set_power(TURN_POWER);
       if (left_sonar < MIN_DIST_THRES || left_sonar < right_sonar) {
+        Serial.println("right");
 #ifdef USE_IMU
         turn_right_with_angle(TURN_ANGLE);
 #else
-        turn_right(300);
+        turn_right(TURN_DELAY_OPEN);
 #endif
       } else {
+        Serial.println("left");
 #ifdef USE_IMU
-        turn_left_with_angle(TURN_ANGLE);
+        turn_left_with_angle(TURN_DELAY_OPEN);
 #else
-        turn_right(300);
+        turn_left(TURN_DELAY_OPEN);
 #endif
       }
 
@@ -238,7 +228,6 @@ void loop() {
     right_sonar = right_sensor.ping_cm();
     front_sonar = front_sensor.ping_cm();
     object_detection = read_serial();
-    DEBUG_INFO_LCD();
 
     // lane changing
     if (object_detection == LEFT) {
@@ -248,19 +237,19 @@ void loop() {
     }
 
     left_sonar = left_sensor.ping_cm();
-    right_sonar = right_sensor.ping_cm(); 
-    DEBUG_INFO_LCD();
+    right_sonar = right_sensor.ping_cm();
 
     // center alignment
-    while (abs(left_sonar - right_sonar) > LR_ERROR_MARGIN) {
+    if (abs(left_sonar - right_sonar) > LR_ERROR_MARGIN) {
       left_sonar = left_sensor.ping_cm();
       right_sonar = right_sensor.ping_cm();
-      DEBUG_INFO_LCD();
 
       if (left_sonar < right_sonar) {
         turn_right(ALIGNMENT_DELAY);
+        Serial.println("AR");
       } else if (left_sonar > right_sonar) {
         turn_left(ALIGNMENT_DELAY);
+        Serial.println("AL");
       }
     }
   }
