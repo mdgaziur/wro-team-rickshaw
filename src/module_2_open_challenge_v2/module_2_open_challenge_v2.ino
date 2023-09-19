@@ -90,14 +90,19 @@ void loop() {
     float dst_from_right_wall = right_sensor.ping_cm();
     float turn_delay_factor = dst_from_left_wall / dst_from_right_wall;
 
+    // The reason why we're increasing "turns" variable inside the if-else statements is due to
+    // the fact that sometimes this branch may get executed when the vehicle is somehow closer
+    // to the front wall that it should be but still not in a valid position to make a turn.
     if (dst_from_left_wall > dst_from_right_wall) {
       steer_left();
       delay(TURN_DURATION_BASE * turn_delay_factor);
       stop_steering();
+      turns += 1;
     } else if (dst_from_left_wall < dst_from_right_wall) {
       steer_right();
       delay(TURN_DURATION_BASE * (1 / turn_delay_factor)); // We're inversing the delay factor because we always want it to be greater than 1.
       stop_steering();
+      turns += 1;
     }
   } else if (left_sensor.ping_cm() != right_sensor.ping_cm()) {
     // The vehicle needs to be centered among the walls to avoid collision and other bad stuff.
