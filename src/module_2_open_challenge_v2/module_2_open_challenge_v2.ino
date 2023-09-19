@@ -1,8 +1,8 @@
 #include <NewPing.h>
 
 // Ultrasonic sensors
-#define FRONT_T 13              // Trigger pin of the right ultrasonic sensor
-#define FRONT_E 12              // Echo pin of the right ultrasonic sensor
+#define FRONT_T 13              // Trigger pin of the front ultrasonic sensor
+#define FRONT_E 12              // Echo pin of the front ultrasonic sensor
 #define RIGHT_T 11              // Trigger pin of the right ultrasonic sensor
 #define RIGHT_E 10              // Echo pin of the right ultrasonic sensor
 #define LEFT_T   9              // Trigger pin of the left ultrasonic sensor
@@ -92,7 +92,7 @@ void loop() {
 
     // The reason why we're increasing "turns" variable inside the if-else statements is due to
     // the fact that sometimes this branch may get executed when the vehicle is somehow closer
-    // to the front wall that it should be but still not in a valid position to make a turn.
+    // to the front wall than it should be but still not in a valid position to make a turn.
     if (dst_from_left_wall > dst_from_right_wall) {
       steer_left();
       delay(TURN_DURATION_BASE * turn_delay_factor);
