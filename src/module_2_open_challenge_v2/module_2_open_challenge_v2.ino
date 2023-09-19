@@ -22,9 +22,9 @@
 #define STEERING_POWER      255 // Power for the steering motor
 #define MIN_DIST_FROM_WALL   20 // Minimum allowed distance from wall(in cm)
 #define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
-                                // Will be multiplied by "turn duration factor" when turning.
+                                // Will be multiplied by "turn duration factor" when turning. (in ms)
 #define MAX_DIST            300 // Maximum distance from any wall(in cm)
-#define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls
+#define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls(in cm)
 
 int     turns = 0;              // Amount of turns the vehicle has completed
 NewPing front_sensor(FRONT_T, FRONT_E, MAX_DIST);
