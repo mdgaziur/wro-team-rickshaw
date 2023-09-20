@@ -82,12 +82,12 @@ void set_up_motor(int en, int in1, int in2, int power) {
 void setup() {
   // Set baud rate as 9600 for Serial communication(mainly for debug purpose)
   Serial.begin(9600);
-  Serial.println("Konichiwaaaa ٩(◕‿◕｡)۶");
+  Serial.println("٩(◕‿◕｡)۶ Konichiwaaaa");
 
   // Set up the MPU(Motion Processing Unit)
   Wire.begin();
   byte status = mpu.begin();
-  Serial.println("MPU6050 status: ");
+  Serial.println("(∩ ⌣̀_⌣́) MPU6050 status: ");
   while(status != 0) {}
   mpu.calcOffsets();
 
@@ -101,7 +101,7 @@ void setup() {
 void loop() {
   // Each lap consists of 4 turns(the track is rectangular). So 3 laps consists of 12 turns
   if (turns == 12) {
-    Serial.println("3 laps done (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧");
+    Serial.println("(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ 3 laps done");
     stop_driving();
     while (1) {}
   }
