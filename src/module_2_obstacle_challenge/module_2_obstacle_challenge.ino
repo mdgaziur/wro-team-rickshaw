@@ -135,7 +135,12 @@ void loop() {
     }
 
     // Keep turning until we've crossed the object
-    while (object_detection != 'N') {}
+    while (object_detection != 'N') {
+      // We're gonna hit the front wall. PRIORITIZE TURNING!
+      if (front_sensor.ping_cm() < MIN_DIST_FROM_WALL) {
+        break;  
+      }
+    }
     stop_steering();
   }
 }
