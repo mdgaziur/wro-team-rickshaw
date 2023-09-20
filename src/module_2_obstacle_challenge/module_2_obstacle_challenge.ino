@@ -88,6 +88,7 @@ void setup() {
   Wire.begin();
   byte status = mpu.begin();
   Serial.println("(∩ ⌣̀_⌣́) MPU6050 status: ");
+  Serial.println(status);
   while(status != 0) {}
   mpu.calcOffsets();
 
