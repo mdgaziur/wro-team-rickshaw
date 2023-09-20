@@ -20,9 +20,9 @@
 #define NORMAL_DRIVE_POWER  200 // Power for normal driving operations
 #define TURNING_DRIVE_POWER 175 // Power for driving motor when the vehicle is turning
 #define STEERING_POWER      255 // Power for the steering motor
-#define MIN_DIST_FROM_WALL   20 // Minimum allowed distance from wall(in cm)
+#define MIN_DIST_FROM_WALL   50 // Minimum allowed distance from wall(in cm)
 #define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
-                                // Will be multiplied by "turn duration factor" when turning. (in ms)
+                                // Will be multiplied by "turn duration factor" when turning.
 #define MAX_DIST            300 // Maximum distance from any wall(in cm)
 #define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls(in cm)
 
@@ -68,7 +68,7 @@ void set_up_motor(int en, int in1, int in2, int power) {
 void setup() {
   // Set baud rate as 9600 for Serial communication(mainly for debug purpose)
   Serial.begin(9600);
-  Serial.println("Konichiwaaaa ٩(◕‿◕｡)۶");
+  Serial.println("٩(◕‿◕｡)۶ Konichiwaaaa");
 
   // Set up the steering motor and the driving motor
   set_up_motor(ENA, IN2, IN3, STEERING_POWER);
@@ -80,14 +80,15 @@ void setup() {
 void loop() {
   // Each lap consists of 4 turns(the track is rectangular). So 3 laps consists of 12 turns
   if (turns == 12) {
-    Serial.println("3 laps done (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧");
+    Serial.println("(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ 3 laps done");
     stop_driving();
     while (1) {}
   }
-  
+
   if (front_sensor.ping_cm() < MIN_DIST_FROM_WALL) {
     float dst_from_left_wall = left_sensor.ping_cm();
     float dst_from_right_wall = right_sensor.ping_cm();
+#ifdef USE_DELAY_FACTOR
     float turn_delay_factor = dst_from_left_wall / dst_from_right_wall;
 
     // The reason why we're increasing "turns" variable inside the if-else statements is due to
@@ -104,7 +105,20 @@ void loop() {
       stop_steering();
       turns += 1;
     }
-  } else if (left_sensor.ping_cm() != right_sensor.ping_cm()) {
+#else
+    if (dst_from_left_wall < dst_from_right_wall) {
+      steer_right();
+      while (left_sensor.ping_cm() < right_sensor.ping_cm()) {}
+      stop_steering();
+      turns += 1;
+    } else if (dst_from_right_wall < dst_from_left_wall) {
+      steer_left();
+      while (right_sensor.ping_cm() < left_sensor.ping_cm()) {}
+      stop_steering();
+      turns += 1;
+    }
+#endif
+  } else if (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
     // The vehicle needs to be centered among the walls to avoid collision and other bad stuff.
     // This is done by finding the most distant wall from the vehicle and going closer to it until
     // both left sensor and the right sensor give almost the same reading
