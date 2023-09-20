@@ -142,5 +142,23 @@ void loop() {
       }
     }
     stop_steering();
+  } else if (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
+    // The vehicle needs to be centered among the walls to avoid collision and other bad stuff.
+    // This is done by finding the most distant wall from the vehicle and going closer to it until
+    // both left sensor and the right sensor give almost the same reading
+    if (left_sensor.ping_cm() > right_sensor.ping_cm()) {
+      steer_left();
+    } else {
+      steer_right();
+    }
+
+    // Keep turning until the readings from the left sensor and the right sensor are almost equal(the vehicle is centered among them)
+    while (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
+      // The vehicle is gonna crash towards the front wall, PRIORITIZE TURNING!
+      if (front_sensor.ping_cm() <= MIN_DIST_FROM_WALL) {
+        break;  
+      }
+    }
+    stop_steering();
   }
 }
