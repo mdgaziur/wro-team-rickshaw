@@ -17,14 +17,21 @@
 #define IN5     22              // Pin2 of the driving motor
 
 // Constants
-#define NORMAL_DRIVE_POWER  200 // Power for normal driving operations
-#define TURNING_DRIVE_POWER 175 // Power for driving motor when the vehicle is turning
+#define NORMAL_DRIVE_POWER  255 // Power for normal driving operations
+#define TURNING_DRIVE_POWER 200 // Power for driving motor when the vehicle is turning
 #define STEERING_POWER      255 // Power for the steering motor
-#define MIN_DIST_FROM_WALL   50 // Minimum allowed distance from wall(in cm)
+#define MIN_DIST_FROM_WALL   60 // Minimum allowed distance from wall(in cm)
 #define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
                                 // Will be multiplied by "turn duration factor" when turning.
 #define MAX_DIST            300 // Maximum distance from any wall(in cm)
 #define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls(in cm)
+#define TURN_STEERING_STOP_DELAY 700 // The delay which is required for the vehicle to be in perfect position after turn(in ms)
+
+#define PRINT_DISTANCE(IDENT, SENSOR) \
+  Serial.print(#IDENT); \
+  Serial.print(": "); \
+  Serial.print(SENSOR.ping_cm()); \
+  Serial.println("cm"); \
 
 int     turns = 0;              // Amount of turns the vehicle has completed
 NewPing front_sensor(FRONT_T, FRONT_E, MAX_DIST);
@@ -32,28 +39,32 @@ NewPing right_sensor(RIGHT_T, RIGHT_E, MAX_DIST);
 NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
 
 void drive_forward() {
-  pinMode(IN4, LOW);
-  pinMode(IN5, HIGH);
-}
-
-void stop_driving() {
-  pinMode(IN4, LOW);
-  pinMode(IN5, LOW);
-}
-
-void steer_left() {
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
 }
 
-void steer_right() {
+void stop_driving() {
   digitalWrite(IN2, LOW);
-  digitalWrite(IN3, HIGH);
+  digitalWrite(IN3, LOW);
+}
+
+void steer_left() {
+  digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW);
+}
+
+void steer_right() {
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN5, HIGH);
 }
 
 void stop_steering() {
-  digitalWrite(IN2, LOW);
-  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW);
+}
+
+void set_power(int power) {
+  analogWrite(ENA, power);
 }
 
 // Sets up motor located at given pins and sets given power(0-255) to the motor
@@ -71,54 +82,45 @@ void setup() {
   Serial.println("٩(◕‿◕｡)۶ Konichiwaaaa");
 
   // Set up the steering motor and the driving motor
-  set_up_motor(ENA, IN2, IN3, STEERING_POWER);
-  set_up_motor(ENB, IN4, IN5, NORMAL_DRIVE_POWER);
+  set_up_motor(ENA, IN2, IN3, NORMAL_DRIVE_POWER);
+  set_up_motor(ENB, IN4, IN5, STEERING_POWER);
 
   drive_forward();
 }
 
 void loop() {
   // Each lap consists of 4 turns(the track is rectangular). So 3 laps consists of 12 turns
-  if (turns == 12) {
-    Serial.println("(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ 3 laps done");
-    stop_driving();
-    while (1) {}
-  }
+//  if (turns == 12) {
+//    Serial.println("(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ 3 laps done");
+//    stop_driving();
+//    while (1) {}
+//  }
+  PRINT_DISTANCE(Front, front_sensor);
+  PRINT_DISTANCE(Right, right_sensor);
+  PRINT_DISTANCE(Left, left_sensor);
 
   if (front_sensor.ping_cm() < MIN_DIST_FROM_WALL) {
+    Serial.print("Turning: ");
+    set_power(TURNING_DRIVE_POWER);
     float dst_from_left_wall = left_sensor.ping_cm();
     float dst_from_right_wall = right_sensor.ping_cm();
-#ifdef USE_DELAY_FACTOR
-    float turn_delay_factor = dst_from_left_wall / dst_from_right_wall;
-
-    // The reason why we're increasing "turns" variable inside the if-else statements is due to
-    // the fact that sometimes this branch may get executed when the vehicle is somehow closer
-    // to the front wall than it should be but still not in a valid position to make a turn.
-    if (dst_from_left_wall > dst_from_right_wall) {
-      steer_left();
-      delay(TURN_DURATION_BASE * turn_delay_factor);
-      stop_steering();
-      turns += 1;
-    } else if (dst_from_left_wall < dst_from_right_wall) {
-      steer_right();
-      delay(TURN_DURATION_BASE * (1 / turn_delay_factor)); // We're inversing the delay factor because we always want it to be greater than 1.
-      stop_steering();
-      turns += 1;
-    }
-#else
     if (dst_from_left_wall < dst_from_right_wall) {
+      Serial.println("Left");
       steer_right();
       while (left_sensor.ping_cm() < right_sensor.ping_cm()) {}
+      delay(TURN_STEERING_STOP_DELAY);
       stop_steering();
       turns += 1;
     } else if (dst_from_right_wall < dst_from_left_wall) {
+      Serial.println("Right");
       steer_left();
       while (right_sensor.ping_cm() < left_sensor.ping_cm()) {}
+      delay(TURN_STEERING_STOP_DELAY);
       stop_steering();
       turns += 1;
     }
-#endif
-  } else if (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
+    set_power(NORMAL_DRIVE_POWER);
+  }  else if (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
     // The vehicle needs to be centered among the walls to avoid collision and other bad stuff.
     // This is done by finding the most distant wall from the vehicle and going closer to it until
     // both left sensor and the right sensor give almost the same reading
