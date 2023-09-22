@@ -1,5 +1,8 @@
 # WRO Team: Rickshaw - _Anything for rickshaw!_
 
+![front-stylish](https://github.com/mdgaziur/wro-team-rickshaw/assets/40351881/6d69a551-bd12-4ffe-ac71-d60a8d729188)
+*Rickshaw in it's full glory*
+
 ## Table of Contents
 
 - [Introduction](#introduction)
