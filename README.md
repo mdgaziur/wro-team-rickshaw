@@ -46,18 +46,16 @@ best performing vehicle.
 - Arduino Mega
 - Raspberry PI 3 B V1.2
 - Raspberry PI Camera
-- HC-SR04 Ultrasonic Sensors(x4)
+- HC-SR04 Ultrasonic Sensors(x3)
 - L293D Motor Driver
-- MPU-9250 IMU Sensor
-- LM2596S Buck Converter
+- LM2596S Buck Converter (x2)
 - Decently Big RC Car (x2)
-- 11.1V 3S LiPo Battery
+- 11.1V 3S 1500mAh LiPo Battery
 - Small Breadboard Terminals(x2)
 
 The PI and the motor driver(and the motors) are powered by the LiPo battery. As we're connecting the Arduino
-to the PI for serial communication, it gets the necessary power from the PI. The sonar sensors and the IMU 
-module are connected to Arduino and they receive power from that. For safely delivering 5V power to the PI,
-a buck converter is used.
+to the PI for serial communication, it gets the necessary power from the PI. The PI and sonar sensors get
+powered by two separate buck converters for the most efficiency.
 
 ## Software
 
@@ -77,110 +75,25 @@ nohting is detected, 'N' is sent.
 
 ### Module 2: Arduino code
 
-This part of the software controls the vehicle. To do this, it works with inputs from 4 ultrasonic sensors, 1 IMU sensor and
-from the Raspberry PI. The Arduino follows an algorithm to control the vehicle. The algorithm can be described using the following
-pseudocode:
+This part of the software controls the vehicle. To do this, it works with inputs from 3 ultrasonic sensors and
+from the Raspberry PI. The Arduino follows an algorithm to control the vehicle.
 
-**TODO**: TEST THE ALGORITHM, FINE TUNE THE CONSTANTS AND FINISH THE DOCUMENTATION.
+The following algorithm is followed during the open challenge round:
 
-```basic
-INT   TURNS = 0
-CONST MIN_DIST_THRES = 20cm
-CONST TURN_ANGLE = 45deg
-CONST TURN_DELAY_OBSTACLE = 200ms
-CONST ALIGNMENT_DELAY = 100ms
-CONST LR_ERROR_MARGIN = 1cm
-CONST TURN_SPEED = 155
-CONST NORMAL_SPEED = 200
-CONST STOP_DELAY = 300ms
+1. Check if the vehicle is closer to the front wall than it is supposed to. Else, jump to 4.
+2. If yes, check if the left wall is closer or the right wall.
+3. If left wall is closer, turn right. Otherwise, turn left.
+4. Check if the left wall or the right wall is closer.
+5. Depending on that, go left or right slightly to make sure that the vehicle is centered.
 
-FUNC TURN_OPPOSITE()
-    SET_SPEED(TURN_SPEED)
-    LAST_YAW = READ_YAW()
+The following algorithm is followed during the obstacle challenge round:
 
-    WHILE ABS(READ_YAW() - LAST_YAW) < 180 DO
-        TURN_LEFT_NO_DELAY()
-        GO_BACK()
-        WHILE READ_SONAR(BACK) > MIN_DIST_THRES DO
-            // The motors are already running, so
-            // there's no need to do anything here
-        DONE
-
-        GO_FORWARD()
-        TURN_RIGHT_NO_DELAY()
-        WHILE READ_SONAR(FRONT) > MIN_DIST_THRES DO
-            // The motors are already running, so
-            // there's no need to do anything here
-        DONE
-        STOP_MOTOR()
-    DONE
-
-    STOP_TURN()
-    GO_FORWARD()
-    SET_SPEED(NORMAL_SPEED)
-END
-
-FUNC LOOP()
-    IF TURNS == 12 THEN
-        DELAY(STOP_DELAY)
-        STOP_MOTOR()
-    ELSE
-        IF TURNS == 8 THEN
-            LET OBJECT_DETECTION = READ_SERIAL()
-    
-            IF OBJECT_DETECTION == "R" THEN
-                TURN_OPPOSITE()
-                RETURN;
-            DONE
-        DONE
-
-        LET LEFT_SONAR = READ_SONAR(LEFT)
-        LET RIGHT_SONAR = READ_SONAR(RIGHT)
-        LET FRONT_SONAR = READ_SONAR(FRONT)
-        LET BACK_SONAR = READ_SONAR(BACK)
-        LET OBJECT_DETECTION = READ_SERIAL()
-
-        // TURNING
-        IF FRONT_SONAR < MIN_DIST_THRES THEN
-            SET_SPEED(TURN_SPEED)
-            IF LEFT_SONAR < MIN_DIST_THRES OR LEFT_SONAR < RIGHT_SONAR THEN
-                TURN_RIGHT(TURN_ANGLE)
-            ELSE
-                TURN_LEFT(TURN_ANGLE)
-            DONE
-
-            TURNS += 1
-            SET_SPEED(NORMAL_SPEED)
-        DONE
-
-        LET LEFT_SONAR = READ_SONAR(LEFT)
-        LET RIGHT_SONAR = READ_SONAR(RIGHT)
-        LET FRONT_SONAR = READ_SONAR(FRONT)
-        LET OBJECT_DETECTION = READ_SERIAL();
-        // LANE CHANGING
-        IF OBJECT_DETECTION == "L" THEN
-            TURN_LEFT(TURN_DELAY_OBSTACLE)
-        ELSE IF OBJECT_DETECTION == "R" THEN
-            TURN_RIGHT(TURN_DELAY_OBSTACLE)
-        DONE
-
-        // CENTER ALIGNMENT
-        LET LEFT_SONAR = READ_SONAR(LEFT)
-        LET RIGHT_SONAR = READ_SONAR(RIGHT)
-        WHILE ABS(LEFT_SONAR - RIGHT_SONAR) > LR_ERROR_MARGIN DO
-            LEFT_SONAR = READ_SONAR(LEFT)
-            RIGHT_SONAR = READ_SONAR(RIGHT)
-            DIFF = LEFT_SONAR - RIGHT_SONAR
-
-            IF DIFF < 0 THEN
-                TURN_RIGHT(ALIGNMENT_DELAY)
-            ELSE IF DIFF > 1 THEN
-                TURN_LEFT(ALIGNMENT_DELAY)
-            DONE
-        DONE
-    DONE
-END
-```
+1. Check if the vehicle is closer to the front wall than it is supposed to. Else, jump to 4.
+2. If yes, check if the left wall is closer or the right wall.
+3. If left wall is closer, turn right. Otherwise, turn left.
+4. Move slightly to left or right depending on the detected object's color if any is detected. Otherwise jump to 5.
+5. Check if the left wall or the right wall is closer.
+6. Depending on that, go left or right slightly to make sure that the vehicle is centered.
 
 ## Design Decisions
 
@@ -213,28 +126,23 @@ This decision has been partly influenced by the scarcity of 3D printing in our r
 car as the chassis allowed us to get around the issue of not being able to do 3D printing or using CNC to build a custom chassis. This has
 also greatly simplified the development process.
 
-### The usage of an IMU sensor
-
-The gyroscope inside the IMU sensor allows us to find out what's the amount of angle the vehicle has turned. This helps us to make proper turns
-around corners. Also, it helps us to turn to the opposite side when necessary.
-
 ## Hardware setup
 
-Firstly, solder jumper wires with appropriate colors to the buck converter. Female jumper wires are preferred for OUT+ and OUT- and male
+Firstly, solder jumper wires with appropriate colors to the buck converters. Female jumper wires are preferred for OUT+ and OUT- and male
 jumper wires are preferred for IN+ and IN-.
 
-Then, Make sure you have a decently sized RC car chassis. Put the motor driver, the buck converter, the battery, the ultrasonic sensors
+Then, Make sure you have a decently sized RC car chassis. Put the motor driver, the buck converters, the battery, the ultrasonic sensors
 and a voltage rail on the bottom chassis. You may want to cut out the AAA battery compartment out of the chassis to save space. Then put 4 hex 
 extenders or anything tall enough on the four holes where screws were located previous. These are located on the 4 corners of the chassis. For the
 second "floor", remove everything from the chassis first. Cut out the AAA battery compartment for saving space. Make a hole on the chassis. This is 
-where we'll route all the cables from the bottom chassis to the top chassis. Put the Raspberry PI, Arduino Mega, PI Camera, IMU sensor, and a voltage
+where we'll route all the cables from the bottom chassis to the top chassis. Put the Raspberry PI, Arduino Mega, PI Camera, and a voltage
 rail there. You may refer to the vehicle pictures for help. Before putting the top chassis on top of the extenders, connect everything based on the
 schematics using jumper wires but do not connect the PI to the buck converter yet. Connect the bottom voltage rail to the battery and check whether
 the lights of the buck converter and the motor driver are turned on or not. If they're turned on, everything's good. If not, immediately disconnect
 the battery and check every connection. The most common mistake is wrong polarity. This can be checked by checking whether any wire has become hot or
 not. If everything's ok, connect the battery and then connect your multimeter to the OUT+ and OUT- pads of the buck converter. Slowly turn the screw like
 thing on the blue part of the buck converter to adjust the output voltage. You should stop when your multimeter reads 5V. Now connect the buck converter
-to the Raspberry PI and put the top chassis on top of the bottom chassis. 
+to the Raspberry PI and put the top chassis on top of the bottom chassis. Repeat the same for the buck converter for the sonar sensors.
 
 ## Software setup
 
