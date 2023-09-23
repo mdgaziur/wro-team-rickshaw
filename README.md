@@ -46,19 +46,22 @@ best performing vehicle.
 
 ## Hardware Components
 
+- Raspberry PI
+- PI Camera
 - Arduino Mega
-- Raspberry PI 3 B V1.2
-- Raspberry PI Camera
-- HC-SR04 Ultrasonic Sensors(x3)
-- L293D Motor Driver
-- LM2596S Buck Converter (x2)
-- Decently Big RC Car (x2)
+- Buck Converter (x2)
+- Motor Driver
+- Breadboard
 - 11.1V 3S 1500mAh LiPo Battery
-- Small Breadboard Terminals(x2)
+- HC-SR04 Sonar Sensor (x3)
+- DC Motor (x3)
+- L293D Motor Driver
+- Switch
+- Push Button
 
 The PI and the motor driver(and the motors) are powered by the LiPo battery. As we're connecting the Arduino
-to the PI for serial communication, it gets the necessary power from the PI. The PI and sonar sensors get
-powered by two separate buck converters for the most efficiency.
+to the PI for serial communication, it gets the necessary power from the PI. The PI and the sonar sensors get
+powered by two separate buck converters for the most efficient result.
 
 ## Software
 
@@ -195,5 +198,6 @@ Add the following line before `exit 0` (Assuming you cloned the repository on th
 ```sh
 python /home/pi/wro-team-rickshaw/src/module_1/module_1.py
 ```
+
 
 And you're done with software setup! Now connect the Arduino to the Raspberry PI and you're ready to go!
