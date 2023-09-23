@@ -50,7 +50,6 @@ best performing vehicle.
 - PI Camera
 - Arduino Mega
 - Buck Converter (x2)
-- Motor Driver
 - Breadboard
 - 11.1V 3S 1500mAh LiPo Battery
 - HC-SR04 Sonar Sensor (x3)
