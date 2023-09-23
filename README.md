@@ -112,8 +112,9 @@ of parts in our region.
 
 We've chosen this component because of it's extensibility and customizability. Raspberry PI is powered by Linux. So, we can tweak
 it as much as we want to match the optimal settings for operating the vehicle. Such tweakings include(but not limited to): console
-mode for reducing CPU load during object detection, adding necessary softwares/libraries for image recognitions. This SBC(aka. Single
-Board Computer) can be used to directly do serial communication with the Arduino Mega to send object detection data through USB connection. 
+mode for reducing CPU load during object detection, adding necessary softwares/libraries for image recognitions.
+
+This SBC(aka. Single Board Computer) can be used to directly do serial communication with the Arduino Mega to send object detection data through USB connection. 
 This allows us to avoid using complex circuitries for communication between PI and Arduino. The VNC and SSH capabilities of PI also allowed
 us to easily do software development of the vehicle directly through a single interface. This reduced the amount of disconnecting and 
 reconnecting stuff for debugging and fixing issues.
@@ -146,14 +147,19 @@ jumper wires are preferred for IN+ and IN-.
 
 Then, Make sure you have a decently sized RC car chassis. Put the motor driver, the buck converters, the battery, the ultrasonic sensors
 and a voltage rail on the bottom chassis. You may want to cut out the AAA battery compartment out of the chassis to save space. Then put 4 hex 
-extenders or anything tall enough on the four holes where screws were located previous. These are located on the 4 corners of the chassis. For the
-second "floor", remove everything from the chassis first. Cut out the AAA battery compartment for saving space. Make a hole on the chassis. This is 
+extenders or anything tall enough on the four holes where screws were located previous. These are located on the 4 corners of the chassis.
+
+For the second "floor", remove everything from the chassis first. Cut out the AAA battery compartment for saving space. Make a hole on the chassis. This is 
 where we'll route all the cables from the bottom chassis to the top chassis. Put the Raspberry PI, Arduino Mega, PI Camera, and a voltage
-rail there. You may refer to the vehicle pictures for help. Before putting the top chassis on top of the extenders, connect everything based on the
+rail there. You may refer to the vehicle pictures for help.
+
+Before putting the top chassis on top of the extenders, connect everything based on the
 schematics using jumper wires but do not connect the PI to the buck converter yet. Connect the bottom voltage rail to the battery and check whether
 the lights of the buck converter and the motor driver are turned on or not. If they're turned on, everything's good. If not, immediately disconnect
 the battery and check every connection. The most common mistake is wrong polarity. This can be checked by checking whether any wire has become hot or
-not. If everything's ok, connect the battery and then connect your multimeter to the OUT+ and OUT- pads of the buck converter. Slowly turn the screw like
+not.
+
+If everything's ok, connect the battery and then connect your multimeter to the OUT+ and OUT- pads of the buck converter. Slowly turn the screw like
 thing on the blue part of the buck converter to adjust the output voltage. You should stop when your multimeter reads 5V. Now connect the buck converter
 to the Raspberry PI and put the top chassis on top of the bottom chassis. Repeat the same for the buck converter for the sonar sensors.
 
