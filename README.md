@@ -12,6 +12,7 @@
 - [Design decisions](#design-decisions)
 - [Hardware Setup](#hardware-setup)
 - [Software Setup](#software-setup)
+- [The Journey](#the-journey)
 
 ## Introduction
 
@@ -214,3 +215,15 @@ python /home/pi/wro-team-rickshaw/src/module_1/module_1.py
 
 
 And you're done with software setup! Now connect the Arduino to the Raspberry PI and you're ready to go!
+
+# The Journey
+
+The journey to building the vehicle have been "rough", to say the least. We've faced extreme amounts of friction due to issues such as low availability of hardware, lack of certain services like 3D printing, etc.
+
+The journey began with two of the teammates(MD Gaziur Rahman Noor and Syed Al Ibrahim) meeting each other through the help of the coach. We've started to plan out how we might make the final product. For an extra hand, Noor added his fellow classmate and close friend. Despite his enthusiasm and active willingness to cooperate, he had to leave the team due to extreme academic pressure. So, another friend of Noor, Adil was added. 
+
+Initially it was planned that we'd do a 3D printing of our custom chassis. However, the lack of 3D printing service forced us to ditch that idea. This resulted in a huge amount of time being wasted. Fast forward to around 14 days before the contest, we've decided to make use of RV car's chassis. 
+
+But then, we've got struck with another issue. The steering system of that chassis wouldn't work properly at all. Because of that, we had to get another one and design our vehicle once again. Hopefully that's the first and last design, right? right? 🥲
+
+We kept hitting issues after issues and we couldn't solve them in time efficient way due to lack of availability of certain components. Our Arduino Mega had an already blown up voltage regulator so VIN wouldn't work. That was a massive stab in the back. Couple that with the fact that the PI would restart itself randomly, it was a truly **rough** joirney. But at least we've been able to make something, get new experiences and have nice memories :^)
