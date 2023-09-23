@@ -1,226 +1,162 @@
 #include <NewPing.h>
-#include <MPU6050_light.h>
 
 // Ultrasonic sensors
-#define FRONT_T 13
-#define FRONT_E 12
-#define RIGHT_T 11
-#define RIGHT_E 10
-#define LEFT_T   9
-#define LEFT_E   8
-#define BACK_T   7
-#define BACK_E   6
+#define FRONT_T 6              // Trigger pin of the front ultrasonic sensor
+#define FRONT_E 7              // Echo pin of the front ultrasonic sensor
+#define RIGHT_T 11              // Trigger pin of the right ultrasonic sensor
+#define RIGHT_E 10              // Echo pin of the right ultrasonic sensor
+#define LEFT_T   9              // Trigger pin of the left ultrasonic sensor
+#define LEFT_E   8              // Echo pin of the left ultrasonic sensor
 
-// Motor driver
-#define ENA      5
-#define IN2      4
-#define IN3      3
-#define ENB     23
-#define IN4      2
-#define IN5     22
 
-// Object detection
-#define LEFT   'L'
-#define RIGHT  'R'
-#define NONE   'N'
+// Motor driver pins
+#define ENA     23              // Enable pin for the driving motor
+#define IN2     22              // Pin1 of the driving motor
+#define IN3      2              // Pin2 of the driving motor
+#define ENB      5              // Enable pin for the steering motor
+#define IN4      4              // Pin1 of the steering motor
+#define IN5      3              // Pin2 of the steering motor
+
 
 // Constants
-#define MIN_DIST_THRES        20 // cm
-#define MAX_DIST             300 // cm
-#define TURN_ANGLE            45 // deg
-#define TURN_DELAY_OBSTACLE  100 // ms
-#define ALIGNMENT_DELAY       50 // ms
-#define LR_ERROR_MARGIN        5 // cm
-#define TURN_POWER           255
-#define NORMAL_POWER         255
-#define TURN_MOTOR_POWER     255
-#define STOP_DELAY           200 // ms
+#define NORMAL_DRIVE_POWER  170 // Power for normal driving operations
+#define SLOW_DRIVE_POWER  170 // Power for normal driving operations
+#define TURNING_DRIVE_POWER 255 // Power for driving motor when the vehicle is turning
+#define STEERING_POWER      255 // Power for the steering motor
+#define MIN_DIST_FROM_WALL   60 // Minimum allowed distance from wall(in cm)
+#define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
+                                // Will be multiplied by "turn duration factor" when turning.
+#define MAX_DIST            120 // Maximum distance from any wall(in cm)
+#define LR_ERROR_MARGIN       3 // Error margin while aligning the vehicle in the center among the right and left walls(in cm)
+#define TURN_STEERING_STOP_DELAY 700 // The delay which is required for the vehicle to be in perfect position after turn(in ms)
+#define CRASH_THRESHOLD           25
+#define CRASH_THRESHOLD2           15
+#define TURN_THRESHOLD            60
 
-#define PRINT_DISTANCE(IDENT, SENSOR) \
-  Serial.print(#IDENT); \
-  Serial.print(": "); \
-  Serial.print(SENSOR.ping_cm()); \
-  Serial.println("cm"); \
-
-MPU6050 imu(Wire);
-int turns = 0;
+NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
 NewPing front_sensor(FRONT_T, FRONT_E, MAX_DIST);
 NewPing right_sensor(RIGHT_T, RIGHT_E, MAX_DIST);
-NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
-NewPing back_sensor(BACK_T, BACK_E, MAX_DIST);
 
-void set_power(int power) {
-  analogWrite(ENB, power);
-}
-
-void go_forward() {
-  digitalWrite(IN4, LOW);
-  digitalWrite(IN5, HIGH);
-}
-
-void go_backward() {
-  digitalWrite(IN4, HIGH);
-  digitalWrite(IN5, LOW);
-}
-
-void stop_motor() {
-  digitalWrite(IN4, LOW);
-  digitalWrite(IN5, LOW);
-}
-
-void turn_left() {
+void drive_forward() {
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
 }
 
-void turn_right() {
+void drive_backward() {
+  Serial.println("GOING BACK");
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
 }
 
-void stop_turn() {
+void stop_driving() {
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, LOW);
 }
 
-void turn_with_angle(float angle, void(*turn_function)()) {
-//  set_power(TURN_POWER);
-  float last_yaw = read_yaw();
-
-  turn_function();
-  while (abs(read_yaw() - last_yaw) < angle) {
-    unsigned long left_sonar = left_sensor.ping_cm();
-    unsigned long right_sonar = right_sensor.ping_cm();
-
-    // Turn left or right depending on the distance from left/right
-    // until the vehicle is far enough from them(if applicable).
-    // If the vehicle is about to hit the front wall during this procedure,
-    // it goes backwards until it's close enough to wall from backside.
-    // After that, it keeps going forward in the direction it's supposed to
-    // go towards.
-    if (left_sonar < MIN_DIST_THRES) {
-      turn_right();
-      while (left_sensor.ping_cm() < MIN_DIST_THRES) {
-        if (front_sensor.ping_cm() < MIN_DIST_THRES) {
-          go_backward();
-          turn_left();
-          while (back_sensor.ping_cm() > MIN_DIST_THRES) {}
-          go_forward();
-          turn_right();
-        }
-      }
-      turn_function();
-    } else if (right_sonar < MIN_DIST_THRES) {
-      turn_left();
-      while (right_sensor.ping_cm() < MIN_DIST_THRES) {
-        if (front_sensor.ping_cm() < MIN_DIST_THRES) {
-          go_backward();
-          turn_right();
-          while (back_sensor.ping_cm() > MIN_DIST_THRES) {}
-          go_forward();
-          turn_left();
-        }
-      }
-      turn_function();
-    }
-  }
-  stop_turn();
-//  set_power(NORMAL_POWER);
+void steer_left() {
+  Serial.println("GOING LEFT");
+  digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW);
 }
 
-float read_yaw() {
-  imu.update();
-  return abs(imu.getAngleZ());
+void steer_right() {
+ 
+  Serial.println("GOING RIGHT");
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN5, HIGH);
 }
 
-void set_up_motor(int enable_pin, int in1, int in2, int power) {
-  pinMode(enable_pin, OUTPUT);
+void stop_steering() {
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW);
+}
+
+void set_power(int power) {
+  analogWrite(ENA, power);
+}
+
+// Sets up motor located at given pins and sets given power(0-255) to the motor
+void set_up_motor(int en, int in1, int in2, int power) {
+  pinMode(en, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
 
-  digitalWrite(enable_pin, HIGH);
-  analogWrite(enable_pin, power);
+  analogWrite(en, power);
 }
 
-void set_up_imu() {
-  Wire.begin();
-  byte status = imu.begin();
-  while(status != 0) {}
-  imu.calcOffsets();
+int ping_cm(NewPing sensor) {
+  int res = 0;
+  int c = 5;
+  while( c-- ) res = max(res, sensor.ping_cm());
+  if( res == 0 ) res = MAX_DIST;
+  return res;
 }
+
 
 void setup() {
+  // put your setup code here, to run once:
   Serial.begin(9600);
-  Serial.println("konichiwaaaa >w<");
 
-  // Set up the IMU
-  set_up_imu();
-
-  // Set up the motor driver
-  set_up_motor(ENA, IN2, IN3, TURN_MOTOR_POWER);
-  set_up_motor(ENB, IN4, IN5, NORMAL_POWER);
-  go_forward();
+  set_up_motor(ENA, IN2, IN3, NORMAL_DRIVE_POWER);
+  set_up_motor(ENB, IN4, IN5, STEERING_POWER);
+  
 }
 
 void loop() {
-  PRINT_DISTANCE(FRONT, front_sensor);
-  PRINT_DISTANCE(LEFT, left_sensor);
-  PRINT_DISTANCE(RIGHT, right_sensor);
-  PRINT_DISTANCE(BACK, back_sensor);
-
-  imu.update();
-  Serial.println(read_yaw());
-  if (false) {
-    delay(STOP_DELAY);
-    stop_motor();
-    Serial.println("3 Laps done");
-    while(1) {}
-  } else {
-    unsigned long left_sonar = left_sensor.ping_cm();
-    unsigned long right_sonar = right_sensor.ping_cm();
-    unsigned long front_sonar = front_sensor.ping_cm();
-    unsigned long back_sonar = back_sensor.ping_cm();
-
-    // Turning
-    if (front_sonar < MIN_DIST_THRES) {
-      Serial.print("Turning ");
-      set_power(TURN_POWER);
-      if (left_sonar < right_sonar) {
-        Serial.println("right");
-        turn_with_angle(TURN_ANGLE, turn_right);
-      } else {
-        Serial.println("left");
-        turn_with_angle(TURN_ANGLE, turn_left);
-      }
-
-      turns += 1;
-      set_power(NORMAL_POWER);
+  char bias = 'R';
+  bool back_flag = 0;
+  const int back_flag_thres = 10;
+  while(1) {
+    // steer_left();
+    // continue;
+    int f_dist = ping_cm(front_sensor);
+    int l_dist = ping_cm(left_sensor);
+    int r_dist = ping_cm(right_sensor);
+    
+    Serial.println(f_dist);
+    Serial.println(l_dist);
+    Serial.println(r_dist);
+    Serial.println("-------");
+    Serial.println("-------");
+    // delay(500);
+    // set_power(170);
+    // drive_forward();
+    // continue;
+    
+    if( l_dist < 8 || r_dist < 8 ) {
+      set_power(SLOW_DRIVE_POWER);
+      stop_steering();
+      stop_driving();
+      delay(100);
+      drive_backward();
+      delay(400);  
+      stop_driving();
+      delay(100);
+      continue;
     }
-
-    left_sonar = left_sensor.ping_cm();
-    right_sonar = right_sensor.ping_cm();
-
-    // center alignment
-    if (abs(left_sonar - right_sonar) > LR_ERROR_MARGIN) {
-      left_sonar = left_sensor.ping_cm();
-      right_sonar = right_sensor.ping_cm();
-
-      if (left_sonar < right_sonar) {
-        turn_right();
-        while (left_sensor.ping_cm() < right_sensor.ping_cm()) {
-          if (front_sensor.ping_cm() <= MIN_DIST_THRES) {
-            break;
-          }
-        }
-      } else if (left_sonar > right_sonar) {
-        turn_left();
-        while (left_sensor.ping_cm() > right_sensor.ping_cm()) {
-          if (front_sensor.ping_cm() <= MIN_DIST_THRES) {
-            break;
-          }
-        }
-      }
-      stop_turn();
+    
+    if( f_dist < CRASH_THRESHOLD ) {
+      set_power(SLOW_DRIVE_POWER);
+      if( r_dist < CRASH_THRESHOLD2 ) steer_right();
+      else if( l_dist < CRASH_THRESHOLD2 ) steer_left();
+      else stop_steering();
+      stop_driving();
+      delay(100);
+      drive_backward();
+      delay(400);
+      stop_driving();
+      delay(100);
+      continue;
     }
+    
+    if( abs(l_dist - r_dist) > 0 ) {
+      if( l_dist > r_dist ) steer_left();
+      else steer_right(); 
+      drive_forward();
+      continue;
+    }
+    
+    drive_forward();
+    stop_steering();
   }
 }
