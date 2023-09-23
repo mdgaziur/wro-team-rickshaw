@@ -91,6 +91,9 @@ The following algorithm is followed during the open challenge round:
 4. Check if the left wall or the right wall is closer.
 5. Depending on that, go left or right slightly to make sure that the vehicle is centered.
 
+Due to some hardware caused inconsistencies, there are some extra checks to make sure that the vehicle less
+affected.
+
 The following algorithm is followed during the obstacle challenge round:
 
 1. Check if the vehicle is closer to the front wall than it is supposed to. Else, jump to 4.
@@ -131,6 +134,11 @@ This decision has been partly influenced by the scarcity of 3D printing in our r
 car as the chassis allowed us to get around the issue of not being able to do 3D printing or using CNC to build a custom chassis. This has
 also greatly simplified the development process.
 
+### The usage of two motors to drive the vehicle forwards or backwards
+
+The motor in the RC car's chassis can't generate enough torque to move the vehicle forward or backward. To remedy this, we've come up with a
+design where two mechanically conncted DC motors. These generate enough torque to move the vehicle.
+
 ## Hardware setup
 
 Firstly, solder jumper wires with appropriate colors to the buck converters. Female jumper wires are preferred for OUT+ and OUT- and male
@@ -155,7 +163,7 @@ We'll start by uploading the second module of our program to the Arduino Mega wh
 program:
 
 - Download and install Arduino IDE (if you already don't have it installed)
-- Open `src/module_2/module_2.ino` in the IDE
+- Open `src/module_2_open_challenge/module_2_open_challenge.ino` in the IDE
 - Connect your Arduino Mega to your computer. Depending on your operating system, you may have to follow additional steps.
 - Press the button with "=>" icon located on top left to upload the program to your Arduino Mega.
 
