@@ -26,7 +26,7 @@
 #define MAX_DIST            300 // Maximum distance from any wall(in cm)
 #define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls(in cm)
 #define TURN_STEERING_STOP_DELAY 400 // The delay which is required for the vehicle to be in perfect position after turn(in ms)
-#define CRASH_THRES          25 // Distance that's counted as crashing(in cm)
+#define CRASH_THRES          10 // Distance that's counted as crashing(in cm)
 
 
 #define PRINT_DISTANCE(IDENT, SENSOR) \
