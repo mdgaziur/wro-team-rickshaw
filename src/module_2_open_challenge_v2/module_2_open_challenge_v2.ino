@@ -18,14 +18,16 @@
 
 // Constants
 #define NORMAL_DRIVE_POWER  255 // Power for normal driving operations
-#define TURNING_DRIVE_POWER 200 // Power for driving motor when the vehicle is turning
+#define TURNING_DRIVE_POWER 255 // Power for driving motor when the vehicle is turning
 #define STEERING_POWER      255 // Power for the steering motor
 #define MIN_DIST_FROM_WALL   60 // Minimum allowed distance from wall(in cm)
 #define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
                                 // Will be multiplied by "turn duration factor" when turning.
 #define MAX_DIST            300 // Maximum distance from any wall(in cm)
 #define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls(in cm)
-#define TURN_STEERING_STOP_DELAY 700 // The delay which is required for the vehicle to be in perfect position after turn(in ms)
+#define TURN_STEERING_STOP_DELAY 400 // The delay which is required for the vehicle to be in perfect position after turn(in ms)
+#define CRASH_THRES          10 // Distance that's counted as crashing(in cm)
+
 
 #define PRINT_DISTANCE(IDENT, SENSOR) \
   Serial.print(#IDENT); \
@@ -41,6 +43,11 @@ NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
 void drive_forward() {
   digitalWrite(IN2, HIGH);
   digitalWrite(IN3, LOW);
+}
+
+void drive_backward() {
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, HIGH);
 }
 
 void stop_driving() {
@@ -65,6 +72,14 @@ void stop_steering() {
 
 void set_power(int power) {
   analogWrite(ENA, power);
+}
+
+int ping_cm(NewPing sensor) {
+  int res = 0;
+  int c = 5;
+  while(c--) res = max(res, sensor.ping_cm());
+  if (res == 0) res = 300;
+  return res; 
 }
 
 // Sets up motor located at given pins and sets given power(0-255) to the motor
@@ -99,44 +114,25 @@ void loop() {
   PRINT_DISTANCE(Right, right_sensor);
   PRINT_DISTANCE(Left, left_sensor);
 
-  if (front_sensor.ping_cm() < MIN_DIST_FROM_WALL) {
-    Serial.print("Turning: ");
-    set_power(TURNING_DRIVE_POWER);
-    float dst_from_left_wall = left_sensor.ping_cm();
-    float dst_from_right_wall = right_sensor.ping_cm();
-    if (dst_from_left_wall < dst_from_right_wall) {
-      Serial.println("Left");
+  if (ping_cm(front_sensor) < CRASH_THRES) {
+    drive_backward();
+  } else if (ping_cm(front_sensor) > CRASH_THRES) {
+    drive_forward();
+  } else if (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {
+    if (ping_cm(left_sensor) < ping_cm(right_sensor)) {
       steer_right();
-      while (left_sensor.ping_cm() < right_sensor.ping_cm()) {}
-      delay(TURN_STEERING_STOP_DELAY);
-      stop_steering();
-      turns += 1;
-    } else if (dst_from_right_wall < dst_from_left_wall) {
-      Serial.println("Right");
-      steer_left();
-      while (right_sensor.ping_cm() < left_sensor.ping_cm()) {}
-      delay(TURN_STEERING_STOP_DELAY);
-      stop_steering();
-      turns += 1;
-    }
-    set_power(NORMAL_DRIVE_POWER);
-  }  else if (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
-    // The vehicle needs to be centered among the walls to avoid collision and other bad stuff.
-    // This is done by finding the most distant wall from the vehicle and going closer to it until
-    // both left sensor and the right sensor give almost the same reading
-    if (left_sensor.ping_cm() > right_sensor.ping_cm()) {
-      steer_left();
     } else {
+      steer_left();
+    }
+  } else if (abs(ping_cm(left_sensor) - ping_cm(right_sensor)) > LR_ERROR_MARGIN) {
+    if (ping_cm(left_sensor) < ping_cm(right_sensor)) {
       steer_right();
+    } else {
+      steer_left();
     }
-
-    // Keep turning until the readings from the left sensor and the right sensor are almost equal(the vehicle is centered among them)
-    while (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
-      // The vehicle is gonna crash towards the front wall, PRIORITIZE TURNING!
-      if (front_sensor.ping_cm() <= MIN_DIST_FROM_WALL) {
-        break;  
-      }
-    }
+  } else {
     stop_steering();
   }
+  
+  delay(50);
 }

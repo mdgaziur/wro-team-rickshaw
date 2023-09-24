@@ -1,5 +1,4 @@
 #include <NewPing.h>
-#include <MPU6050_light.h>
 
 // Ultrasonic sensors
 #define FRONT_T 13              // Trigger pin of the front ultrasonic sensor
@@ -18,29 +17,36 @@
 #define IN5     22              // Pin2 of the driving motor
 
 // Constants
-#define NORMAL_DRIVE_POWER  200 // Power for normal driving operations
+#define NORMAL_DRIVE_POWER  255 // Power for normal driving operations
 #define TURNING_DRIVE_POWER 175 // Power for driving motor when the vehicle is turning
-#define STEERING_POWER      255 // Power for the steering motor
-#define MIN_DIST_FROM_WALL   50 // Minimum allowed distance from wall(in cm)
+#define STEERING_POWER      255 // Power for -+the steering motor
+#define MIN_DIST_FROM_WALL   30 // Minimum allowed distance from wall(in cm)
 #define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
-                                // Will be multiplied by "turn duration factor" when turning.
+// Will be multiplied by "turn duration factor" when turning.
 #define MAX_DIST            300 // Maximum distance from any wall(in cm)
 #define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls
 
+#define BLOCK_UNITL_POSSIBLE_COLLISION(expr) \
+      while (expr && ping_cm(front_sensor) > LR_ERROR_MARGIN && get_object_detection_status() == 'N') {}
+
 int     turns = 0;              // Amount of turns the vehicle has completed
-MPU6050 mpu(Wire);
 NewPing front_sensor(FRONT_T, FRONT_E, MAX_DIST);
 NewPing right_sensor(RIGHT_T, RIGHT_E, MAX_DIST);
 NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
 
 void drive_forward() {
-  pinMode(IN4, LOW);
-  pinMode(IN5, HIGH);
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN5, HIGH);
+}
+
+void drive_backward() {
+  digitalWrite(IN4, HIGH);
+  digitalWrite(IN5, LOW);
 }
 
 void stop_driving() {
-  pinMode(IN4, LOW);
-  pinMode(IN5, LOW);
+  digitalWrite(IN4, LOW);
+  digitalWrite(IN5, LOW);
 }
 
 void steer_left() {
@@ -58,20 +64,18 @@ void stop_steering() {
   digitalWrite(IN3, LOW);
 }
 
-void get_yaw() {
-  mpu.update();
-
-  return mpu.getAngleX();
-}
-
 char get_object_detection_status() {
   if (!Serial.available()) return 'N';
-  
+
   return (char)Serial.read();
 }
 
 // Sets up motor located at given pins and sets given power(0-255) to the motor
 void set_up_motor(int en, int in1, int in2, int power) {
+  Serial.println(en);
+  Serial.println(in1);
+  Serial.println(in2);
+  Serial.println(power);
   pinMode(en, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
@@ -79,18 +83,18 @@ void set_up_motor(int en, int in1, int in2, int power) {
   analogWrite(en, power);
 }
 
+int ping_cm(NewPing sensor) {
+  int res = 0;
+  int c = 5;
+  while ( c-- ) res = max(res, sensor.ping_cm());
+  if ( res == 0 ) res = 1000;
+  return res;
+}
+
 void setup() {
   // Set baud rate as 9600 for Serial communication(mainly for debug purpose)
   Serial.begin(9600);
   Serial.println("٩(◕‿◕｡)۶ Konichiwaaaa");
-
-  // Set up the MPU(Motion Processing Unit)
-  Wire.begin();
-  byte status = mpu.begin();
-  Serial.println("(∩ ⌣̀_⌣́) MPU6050 status: ");
-  Serial.println(status);
-  while(status != 0) {}
-  mpu.calcOffsets();
 
   // Set up the steering motor and the driving motor
   set_up_motor(ENA, IN2, IN3, STEERING_POWER);
@@ -100,66 +104,52 @@ void setup() {
 }
 
 void loop() {
-  // Each lap consists of 4 turns(the track is rectangular). So 3 laps consists of 12 turns
-  if (turns == 12) {
-    Serial.println("(ﾉ◕ヮ◕)ﾉ*:･ﾟ✧ 3 laps done");
-    stop_driving();
-    while (1) {}
-  }
-
-  char object_detection = get_object_detection_status();
-
-  if (front_sensor.ping_cm() < MIN_DIST_FROM_WALL) {
-    float dst_from_left_wall = left_sensor.ping_cm();
-    float dst_from_right_wall = right_sensor.ping_cm();
-    float turn_delay_factor = dst_from_left_wall / dst_from_right_wall;
-
-    // The reason why we're increasing "turns" variable inside the if-else statements is due to
-    // the fact that sometimes this branch may get executed when the vehicle is somehow closer
-    // to the front wall than it should be but still not in a valid position to make a turn.
-    if (dst_from_left_wall > dst_from_right_wall) {
-      steer_left();
-      delay(TURN_DURATION_BASE * turn_delay_factor);
-      stop_steering();
-      turns += 1;
-    } else if (dst_from_left_wall < dst_from_right_wall) {
-      steer_right();
-      delay(TURN_DURATION_BASE * (1 / turn_delay_factor)); // We're inversing the delay factor because we always want it to be greater than 1.
-      stop_steering();
-      turns += 1;
-    }
-  } else if (object_detection != 'N') {
-    if (object_detection == 'L') {
-      steer_left();
-    } else if (object_detection == 'R') {
-      steer_right();
-    }
-
-    // Keep turning until we've crossed the object
-    while (object_detection != 'N') {
-      // We're gonna hit the front wall. PRIORITIZE TURNING!
-      if (front_sensor.ping_cm() < MIN_DIST_FROM_WALL) {
-        break;  
-      }
-    }
-    stop_steering();
-  } else if (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
-    // The vehicle needs to be centered among the walls to avoid collision and other bad stuff.
-    // This is done by finding the most distant wall from the vehicle and going closer to it until
-    // both left sensor and the right sensor give almost the same reading
-    if (left_sensor.ping_cm() > right_sensor.ping_cm()) {
+  const char object_detection = get_object_detection_status();
+  if (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {
+    if (ping_cm(left_sensor) > ping_cm(right_sensor)) {
       steer_left();
     } else {
       steer_right();
     }
 
-    // Keep turning until the readings from the left sensor and the right sensor are almost equal(the vehicle is centered among them)
-    while (abs(left_sensor.ping_cm() - right_sensor.ping_cm()) > LR_ERROR_MARGIN) {
-      // The vehicle is gonna crash towards the front wall, PRIORITIZE TURNING!
-      if (front_sensor.ping_cm() <= MIN_DIST_FROM_WALL) {
-        break;  
+    while (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {}
+    stop_steering();
+  } else if (object_detection == 'L' && ping_cm(left_sensor) > MIN_DIST_FROM_WALL) {
+    steer_left();
+    while (ping_cm(left_sensor) > MIN_DIST_FROM_WALL) {
+      if (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {
+        break;
       }
     }
+    steer_right();
+    delay(200);
+    stop_steering();
+  } else if (object_detection == 'R' && ping_cm(right_sensor) > MIN_DIST_FROM_WALL) {
+    steer_right();
+    while (ping_cm(right_sensor) > MIN_DIST_FROM_WALL) {
+      if (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {
+        break;
+      }
+    }
+    steer_left();
+    delay(200);
+    stop_steering();
+  } else if (ping_cm(left_sensor) < MIN_DIST_FROM_WALL) {
+    steer_right();
+    BLOCK_UNITL_POSSIBLE_COLLISION(ping_cm(left_sensor) < MIN_DIST_FROM_WALL);
+    stop_steering();
+  } else if (ping_cm(right_sensor) < MIN_DIST_FROM_WALL) {
+    steer_right();
+    BLOCK_UNITL_POSSIBLE_COLLISION(ping_cm(left_sensor) < MIN_DIST_FROM_WALL);
+    stop_steering();
+  } else if (abs(ping_cm(left_sensor) - ping_cm(right_sensor)) > LR_ERROR_MARGIN) {
+    if (ping_cm(left_sensor) > ping_cm(right_sensor)) {
+      steer_left();
+    } else {
+      steer_right();
+    }
+
+    BLOCK_UNITL_POSSIBLE_COLLISION(abs(ping_cm(left_sensor) - ping_cm(right_sensor)) > LR_ERROR_MARGIN);
     stop_steering();
   }
 }

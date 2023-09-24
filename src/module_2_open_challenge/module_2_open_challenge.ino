@@ -1,8 +1,8 @@
 #include <NewPing.h>
 
 // Ultrasonic sensors
-#define FRONT_T 6              // Trigger pin of the front ultrasonic sensor
-#define FRONT_E 7              // Echo pin of the front ultrasonic sensor
+#define FRONT_T 13              // Trigger pin of the front ultrasonic sensor
+#define FRONT_E 12              // Echo pin of the front ultrasonic sensor
 #define RIGHT_T 11              // Trigger pin of the right ultrasonic sensor
 #define RIGHT_E 10              // Echo pin of the right ultrasonic sensor
 #define LEFT_T   9              // Trigger pin of the left ultrasonic sensor
@@ -19,18 +19,17 @@
 
 
 // Constants
-#define NORMAL_DRIVE_POWER  170 // Power for normal driving operations
-#define SLOW_DRIVE_POWER  170 // Power for normal driving operations
-#define TURNING_DRIVE_POWER 255 // Power for driving motor when the vehicle is turning
+#define NORMAL_DRIVE_POWER  200 // Power for normal driving operations
+#define TURNING_DRIVE_POWER 200 // Power for driving motor when the vehicle is turning
 #define STEERING_POWER      255 // Power for the steering motor
 #define MIN_DIST_FROM_WALL   60 // Minimum allowed distance from wall(in cm)
 #define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
                                 // Will be multiplied by "turn duration factor" when turning.
-#define MAX_DIST            120 // Maximum distance from any wall(in cm)
+#define MAX_DIST            1000 // Maximum distance from any wall(in cm)
 #define LR_ERROR_MARGIN       3 // Error margin while aligning the vehicle in the center among the right and left walls(in cm)
 #define TURN_STEERING_STOP_DELAY 700 // The delay which is required for the vehicle to be in perfect position after turn(in ms)
-#define CRASH_THRESHOLD           25
-#define CRASH_THRESHOLD2           15
+#define CRASH_THRESHOLD           20
+#define CRASH_THRESHOLD2           10
 #define TURN_THRESHOLD            60
 
 NewPing left_sensor(LEFT_T, LEFT_E, MAX_DIST);
@@ -43,7 +42,6 @@ void drive_forward() {
 }
 
 void drive_backward() {
-  Serial.println("GOING BACK");
   digitalWrite(IN2, LOW);
   digitalWrite(IN3, HIGH);
 }
@@ -88,7 +86,7 @@ int ping_cm(NewPing sensor) {
   int res = 0;
   int c = 5;
   while( c-- ) res = max(res, sensor.ping_cm());
-  if( res == 0 ) res = MAX_DIST;
+  if( res == 0 ) res = 1000;
   return res;
 }
 
@@ -107,8 +105,6 @@ void loop() {
   bool back_flag = 0;
   const int back_flag_thres = 10;
   while(1) {
-    // steer_left();
-    // continue;
     int f_dist = ping_cm(front_sensor);
     int l_dist = ping_cm(left_sensor);
     int r_dist = ping_cm(right_sensor);
@@ -117,35 +113,21 @@ void loop() {
     Serial.println(l_dist);
     Serial.println(r_dist);
     Serial.println("-------");
-    Serial.println("-------");
-    // delay(500);
-    // set_power(170);
-    // drive_forward();
-    // continue;
+    Serial.println("-------")
     
     if( l_dist < 8 || r_dist < 8 ) {
-      set_power(SLOW_DRIVE_POWER);
       stop_steering();
-      stop_driving();
-      delay(100);
       drive_backward();
-      delay(400);  
-      stop_driving();
-      delay(100);
+      delay(100);  
       continue;
     }
     
     if( f_dist < CRASH_THRESHOLD ) {
-      set_power(SLOW_DRIVE_POWER);
       if( r_dist < CRASH_THRESHOLD2 ) steer_right();
       else if( l_dist < CRASH_THRESHOLD2 ) steer_left();
       else stop_steering();
-      stop_driving();
-      delay(100);
       drive_backward();
-      delay(400);
-      stop_driving();
-      delay(100);
+      delay(150);
       continue;
     }
     
