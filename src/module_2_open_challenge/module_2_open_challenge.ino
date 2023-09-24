@@ -113,7 +113,7 @@ void loop() {
     Serial.println(l_dist);
     Serial.println(r_dist);
     Serial.println("-------");
-    Serial.println("-------");
+    Serial.println("-------")
     
     if( l_dist < 8 || r_dist < 8 ) {
       stop_steering();

@@ -12,6 +12,7 @@
 - [Design decisions](#design-decisions)
 - [Hardware Setup](#hardware-setup)
 - [Software Setup](#software-setup)
+- [The Journey](#the-journey)
 
 ## Introduction
 
@@ -46,19 +47,21 @@ best performing vehicle.
 
 ## Hardware Components
 
+- Raspberry PI
+- PI Camera
 - Arduino Mega
-- Raspberry PI 3 B V1.2
-- Raspberry PI Camera
-- HC-SR04 Ultrasonic Sensors(x3)
-- L293D Motor Driver
-- LM2596S Buck Converter (x2)
-- Decently Big RC Car (x2)
+- Buck Converter (x2)
+- Breadboard
 - 11.1V 3S 1500mAh LiPo Battery
-- Small Breadboard Terminals(x2)
+- HC-SR04 Sonar Sensor (x3)
+- DC Motor (x3)
+- L293D Motor Driver
+- Switch
+- Push Button
 
 The PI and the motor driver(and the motors) are powered by the LiPo battery. As we're connecting the Arduino
-to the PI for serial communication, it gets the necessary power from the PI. The PI and sonar sensors get
-powered by two separate buck converters for the most efficiency.
+to the PI for serial communication, it gets the necessary power from the PI. The PI and the sonar sensors get
+powered by two separate buck converters for the most efficient result.
 
 ## Software
 
@@ -89,6 +92,9 @@ The following algorithm is followed during the open challenge round:
 4. Check if the left wall or the right wall is closer.
 5. Depending on that, go left or right slightly to make sure that the vehicle is centered.
 
+Due to some hardware caused inconsistencies, there are some extra checks to make sure that the vehicle less
+affected.
+
 The following algorithm is followed during the obstacle challenge round:
 
 1. Check if the vehicle is closer to the front wall than it is supposed to. Else, jump to 4.
@@ -107,8 +113,9 @@ of parts in our region.
 
 We've chosen this component because of it's extensibility and customizability. Raspberry PI is powered by Linux. So, we can tweak
 it as much as we want to match the optimal settings for operating the vehicle. Such tweakings include(but not limited to): console
-mode for reducing CPU load during object detection, adding necessary softwares/libraries for image recognitions. This SBC(aka. Single
-Board Computer) can be used to directly do serial communication with the Arduino Mega to send object detection data through USB connection. 
+mode for reducing CPU load during object detection, adding necessary softwares/libraries for image recognitions.
+
+This SBC(aka. Single Board Computer) can be used to directly do serial communication with the Arduino Mega to send object detection data through USB connection. 
 This allows us to avoid using complex circuitries for communication between PI and Arduino. The VNC and SSH capabilities of PI also allowed
 us to easily do software development of the vehicle directly through a single interface. This reduced the amount of disconnecting and 
 reconnecting stuff for debugging and fixing issues.
@@ -129,6 +136,11 @@ This decision has been partly influenced by the scarcity of 3D printing in our r
 car as the chassis allowed us to get around the issue of not being able to do 3D printing or using CNC to build a custom chassis. This has
 also greatly simplified the development process.
 
+### The usage of two motors to drive the vehicle forwards or backwards
+
+The motor in the RC car's chassis can't generate enough torque to move the vehicle forward or backward. To remedy this, we've come up with a
+design where two mechanically conncted DC motors. These generate enough torque to move the vehicle.
+
 ## Hardware setup
 
 Firstly, solder jumper wires with appropriate colors to the buck converters. Female jumper wires are preferred for OUT+ and OUT- and male
@@ -136,14 +148,19 @@ jumper wires are preferred for IN+ and IN-.
 
 Then, Make sure you have a decently sized RC car chassis. Put the motor driver, the buck converters, the battery, the ultrasonic sensors
 and a voltage rail on the bottom chassis. You may want to cut out the AAA battery compartment out of the chassis to save space. Then put 4 hex 
-extenders or anything tall enough on the four holes where screws were located previous. These are located on the 4 corners of the chassis. For the
-second "floor", remove everything from the chassis first. Cut out the AAA battery compartment for saving space. Make a hole on the chassis. This is 
+extenders or anything tall enough on the four holes where screws were located previous. These are located on the 4 corners of the chassis.
+
+For the second "floor", remove everything from the chassis first. Cut out the AAA battery compartment for saving space. Make a hole on the chassis. This is 
 where we'll route all the cables from the bottom chassis to the top chassis. Put the Raspberry PI, Arduino Mega, PI Camera, and a voltage
-rail there. You may refer to the vehicle pictures for help. Before putting the top chassis on top of the extenders, connect everything based on the
+rail there. You may refer to the vehicle pictures for help.
+
+Before putting the top chassis on top of the extenders, connect everything based on the
 schematics using jumper wires but do not connect the PI to the buck converter yet. Connect the bottom voltage rail to the battery and check whether
 the lights of the buck converter and the motor driver are turned on or not. If they're turned on, everything's good. If not, immediately disconnect
 the battery and check every connection. The most common mistake is wrong polarity. This can be checked by checking whether any wire has become hot or
-not. If everything's ok, connect the battery and then connect your multimeter to the OUT+ and OUT- pads of the buck converter. Slowly turn the screw like
+not.
+
+If everything's ok, connect the battery and then connect your multimeter to the OUT+ and OUT- pads of the buck converter. Slowly turn the screw like
 thing on the blue part of the buck converter to adjust the output voltage. You should stop when your multimeter reads 5V. Now connect the buck converter
 to the Raspberry PI and put the top chassis on top of the bottom chassis. Repeat the same for the buck converter for the sonar sensors.
 
@@ -153,7 +170,7 @@ We'll start by uploading the second module of our program to the Arduino Mega wh
 program:
 
 - Download and install Arduino IDE (if you already don't have it installed)
-- Open `src/module_2/module_2.ino` in the IDE
+- Open `src/module_2_open_challenge/module_2_open_challenge.ino` in the IDE
 - Connect your Arduino Mega to your computer. Depending on your operating system, you may have to follow additional steps.
 - Press the button with "=>" icon located on top left to upload the program to your Arduino Mega.
 
@@ -196,4 +213,17 @@ Add the following line before `exit 0` (Assuming you cloned the repository on th
 python /home/pi/wro-team-rickshaw/src/module_1/module_1.py
 ```
 
+
 And you're done with software setup! Now connect the Arduino to the Raspberry PI and you're ready to go!
+
+# The Journey
+
+The journey to building the vehicle have been "rough", to say the least. We've faced extreme amounts of friction due to issues such as low availability of hardware, lack of certain services like 3D printing, etc.
+
+The journey began with two of the teammates(MD Gaziur Rahman Noor and Syed Al Ibrahim) meeting each other through the help of the coach. We've started to plan out how we might make the final product. For an extra hand, Noor added his fellow classmate and close friend. Despite his enthusiasm and active willingness to cooperate, he had to leave the team due to extreme academic pressure. So, another friend of Noor, Adil was added. 
+
+Initially it was planned that we'd do a 3D printing of our custom chassis. However, the lack of 3D printing service forced us to ditch that idea. This resulted in a huge amount of time being wasted. Fast forward to around 14 days before the contest, we've decided to make use of RV car's chassis. 
+
+But then, we've got struck with another issue. The steering system of that chassis wouldn't work properly at all. Because of that, we had to get another one and design our vehicle once again. Hopefully that's the first and last design, right? right? 🥲
+
+We kept hitting issues after issues and we couldn't solve them in time efficient way due to lack of availability of certain components. Our Arduino Mega had an already blown up voltage regulator so VIN wouldn't work. That was a massive stab in the back. Couple that with the fact that the PI would restart itself randomly, it was a truly **rough** joirney. But at least we've been able to make something, get new experiences and have nice memories :^)
