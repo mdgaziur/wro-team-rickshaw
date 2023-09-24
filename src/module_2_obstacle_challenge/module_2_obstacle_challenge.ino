@@ -20,12 +20,14 @@
 #define NORMAL_DRIVE_POWER  255 // Power for normal driving operations
 #define TURNING_DRIVE_POWER 175 // Power for driving motor when the vehicle is turning
 #define STEERING_POWER      255 // Power for -+the steering motor
-#define MIN_DIST_FROM_WALL_FRONT   30 // Minimum allowed distance from wall(in cm)
-#define MIN_DIST_FROM_WALL_LAT   30 // Minimum allowed distance from wall(in cm)
+#define MIN_DIST_FROM_WALL   30 // Minimum allowed distance from wall(in cm)
 #define TURN_DURATION_BASE  200 // Base value used as the duration for which the vehicle will turn.
-                                // Will be multiplied by "turn duration factor" when turning.
+// Will be multiplied by "turn duration factor" when turning.
 #define MAX_DIST            300 // Maximum distance from any wall(in cm)
 #define LR_ERROR_MARGIN       2 // Error margin while aligning the vehicle in the center among the right and left walls
+
+#define BLOCK_UNITL_POSSIBLE_COLLISION(expr) \
+      while (expr && ping_cm(front_sensor) > LR_ERROR_MARGIN && get_object_detection_status() == 'N') {}
 
 int     turns = 0;              // Amount of turns the vehicle has completed
 NewPing front_sensor(FRONT_T, FRONT_E, MAX_DIST);
@@ -64,7 +66,7 @@ void stop_steering() {
 
 char get_object_detection_status() {
   if (!Serial.available()) return 'N';
-  
+
   return (char)Serial.read();
 }
 
@@ -84,21 +86,9 @@ void set_up_motor(int en, int in1, int in2, int power) {
 int ping_cm(NewPing sensor) {
   int res = 0;
   int c = 5;
-  while( c-- ) res = max(res, sensor.ping_cm());
-  if( res == 0 ) res = 1000;
-  return res; 
-}
-
-
-void handle_obstacle_avoidance() {
-  if( ping_cm(front_sensor) < MIN_DIST_FROM_WALL_FRONT ) {
-    drive_backward();
-    if( ping_cm(left_sensor) < MIN_DIST_FROM_WALL_LAT ) steer_left();
-    else if( ping_cm(right_sensor) < MIN_DIST_FROM_WALL_LAT ) steer_right();
-    delay(200);
-    stop_steering();
-    stop_driving();
-  }
+  while ( c-- ) res = max(res, sensor.ping_cm());
+  if ( res == 0 ) res = 1000;
+  return res;
 }
 
 void setup() {
@@ -111,24 +101,55 @@ void setup() {
   set_up_motor(ENB, IN4, IN5, NORMAL_DRIVE_POWER);
 
   drive_forward();
-  Serial.println("ping!");
 }
 
 void loop() {
-
-  Serial.println(ping_cm(front_sensor));
-  Serial.println(ping_cm(left_sensor));
-  Serial.println(ping_cm(right_sensor));
-  Serial.println("--------------------");
-  Serial.println("--------------------");
-  
   const char object_detection = get_object_detection_status();
-  if (object_detection == 'L') {
+  if (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {
+    if (ping_cm(left_sensor) > ping_cm(right_sensor)) {
+      steer_left();
+    } else {
+      steer_right();
+    }
+
+    while (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {}
+    stop_steering();
+  } else if (object_detection == 'L' && ping_cm(left_sensor) > MIN_DIST_FROM_WALL) {
     steer_left();
-  } else if( object_detection == 'R' ) {
+    while (ping_cm(left_sensor) > MIN_DIST_FROM_WALL) {
+      if (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {
+        break;
+      }
+    }
     steer_right();
+    delay(200);
+    stop_steering();
+  } else if (object_detection == 'R' && ping_cm(right_sensor) > MIN_DIST_FROM_WALL) {
+    steer_right();
+    while (ping_cm(right_sensor) > MIN_DIST_FROM_WALL) {
+      if (ping_cm(front_sensor) < MIN_DIST_FROM_WALL) {
+        break;
+      }
+    }
+    steer_left();
+    delay(200);
+    stop_steering();
+  } else if (ping_cm(left_sensor) < MIN_DIST_FROM_WALL) {
+    steer_right();
+    BLOCK_UNITL_POSSIBLE_COLLISION(ping_cm(left_sensor) < MIN_DIST_FROM_WALL);
+    stop_steering();
+  } else if (ping_cm(right_sensor) < MIN_DIST_FROM_WALL) {
+    steer_right();
+    BLOCK_UNITL_POSSIBLE_COLLISION(ping_cm(left_sensor) < MIN_DIST_FROM_WALL);
+    stop_steering();
+  } else if (abs(ping_cm(left_sensor) - ping_cm(right_sensor)) > LR_ERROR_MARGIN) {
+    if (ping_cm(left_sensor) > ping_cm(right_sensor)) {
+      steer_left();
+    } else {
+      steer_right();
+    }
+
+    BLOCK_UNITL_POSSIBLE_COLLISION(abs(ping_cm(left_sensor) - ping_cm(right_sensor)) > LR_ERROR_MARGIN);
+    stop_steering();
   }
-  
-  handle_obstacle_avoidance();
-  delay(200);
 }
